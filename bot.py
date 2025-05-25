@@ -1,7 +1,4 @@
-# main.py
-
 import os
-import asyncio
 from pyrogram import Client
 from dotenv import load_dotenv
 
@@ -17,11 +14,17 @@ LOGS_CHANNEL_ID = int(os.getenv("LOGS_CHANNEL_ID"))
 
 app = Client("file_share_bot", bot_token=BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
 
-async def main():
-    await app.start()
+@app.on_message()
+async def on_start_message(client, message):
+    # Optional: you can register default start handler here if needed
+    pass
+
+async def startup():
     await log_to_channel(app, "Lakki, I am back!")
     register_handlers(app)
-    await app.idle()
+
+app.startup = startup  # if using pyrogram 2.x or add in start manually
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    register_handlers(app)
+    app.run()
