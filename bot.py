@@ -26,5 +26,5 @@ async def startup():
 app.startup = startup  # if using pyrogram 2.x or add in start manually
 
 if __name__ == "__main__":
-    register_handlers(app)
+    await register_handlers(app)
     app.run()
