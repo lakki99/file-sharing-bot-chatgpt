@@ -1,16 +1,11 @@
-# bot/utils.py
+import string
+import random
+from datetime import datetime, timedelta
+from bot.config import EXPIRY_MINUTES
 
-import os
-from pyrogram import Client
-from pyrogram.types import Message
+def generate_short_id(length=6):
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choices(chars, k=length))
 
-from dotenv import load_dotenv
-load_dotenv("config.env")
-
-LOGS_CHANNEL_ID = int(os.getenv("LOGS_CHANNEL_ID"))
-
-async def log_to_channel(client: Client, text: str):
-    try:
-        await client.send_message(chat_id=LOGS_CHANNEL_ID, text=text)
-    except Exception as e:
-        print(f"Logging failed: {e}")
+def get_expiry_timestamp():
+    return (datetime.utcnow() + timedelta(minutes=EXPIRY_MINUTES)).timestamp()
