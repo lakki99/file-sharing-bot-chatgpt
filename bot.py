@@ -1,24 +1,9 @@
-import os
-import asyncio
 from pyrogram import Client
-from dotenv import load_dotenv
-
 from bot.handlers import register_handlers
-from bot.utils import log_to_channel
+from bot.config import API_ID, API_HASH, BOT_TOKEN
 
-load_dotenv("config.env")
+app = Client("file_sharing_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
+register_handlers(app)
 
-app = Client("file_share_bot", bot_token=BOT_TOKEN, api_id=API_ID, api_hash=API_HASH)
-
-async def main():
-    await app.start()
-    await log_to_channel(app, "Lakki, I am back!")
-    await register_handlers(app)
-    await app.idle()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+app.run()
