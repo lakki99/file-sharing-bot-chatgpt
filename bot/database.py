@@ -1,49 +1,67 @@
-# bot/database.py
-
-import os
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 from datetime import datetime
-from dotenv import load_dotenv
+from bot.config import MONGO_URI
 
-load_dotenv("config.env")
+client = MongoClient(MONGO_URI)
+db = client.file_share_bot
 
-MONGO_URL = os.getenv("MONGO_URL")
-DATABASE_CHANNEL_ID = int(os.getenv("DATABASE_CHANNEL_ID"))
+# Collections
+users = db.users
+files = db.files
+batches = db.batches
 
-client = MongoClient(MONGO_URL)
-db = client.file_bot
+# User functions
+def add_user(user_id):
+    users.update_one({"_id": user_id}, {"$setOnInsert": {"verified": False}}, upsert=True)
 
-files_col = db.files
-users_col = db.users
+def is_admin(user_id):
+    from bot.config import ADMINS
+    return user_id in ADMINS
 
-async def save_file(client, msg):
-    file_data = {
-        "user_id": msg.from_user.id,
-        "chat_id": msg.chat.id,
-        "message_id": msg.id,
-        "date": datetime.utcnow(),
-        "views": 0,
-    }
-    result = files_col.insert_one(file_data)
+def is_verified(user_id):
+    data = users.find_one({"_id": user_id})
+    return data and data.get("verified", False)
 
-    forward = await msg.forward(DATABASE_CHANNEL_ID)
-    link = f"https://t.me/{(await client.get_chat(DATABASE_CHANNEL_ID)).username}/{forward.id}"
-    files_col.update_one({"_id": result.inserted_id}, {"$set": {"link": link}})
-    return forward
+def verify_user(user_id):
+    users.update_one({"_id": user_id}, {"$set": {"verified": True}}, upsert=True)
 
-async def get_user_files(user_id, limit=200):
-    files = files_col.find({"user_id": user_id}).sort("date", -1).limit(limit)
-    result = []
-    async for f in files:
-        result.append({
-            "link": f.get("link"),
-            "shortlink": f.get("shortlink", f.get("link")),
-        })
-    return result
+# File functions
+def save_file(file_id, short_id, expiry_ts, uploader_id):
+    files.insert_one({
+        "_id": short_id,
+        "file_id": file_id,
+        "expires_at": expiry_ts,
+        "clicks": 0,
+        "uploader": uploader_id,
+        "type": "file"
+    })
 
-async def update_view(link):
-    files_col.update_one({"link": link}, {"$inc": {"views": 1}})
+def get_file_by_short_id(short_id):
+    return files.find_one({"_id": short_id, "type": "file"})
 
-async def get_views(link):
-    file = files_col.find_one({"link": link})
-    return file["views"] if file else 0
+def increase_click(short_id):
+    files.update_one({"_id": short_id}, {"$inc": {"clicks": 1}})
+
+# Batch functions
+def save_batch(start_msg_id, end_msg_id, short_id, uploader_id):
+    batches.insert_one({
+        "_id": short_id,
+        "start_msg_id": start_msg_id,
+        "end_msg_id": end_msg_id,
+        "clicks": 0,
+        "uploader": uploader_id,
+        "type": "batch"
+    })
+
+def get_batch_by_short_id(short_id):
+    return batches.find_one({"_id": short_id})
+
+def increase_batch_click(short_id):
+    batches.update_one({"_id": short_id}, {"$inc": {"clicks": 1}})
+
+# Stats
+def get_top_files(limit=10):
+    return list(files.find().sort("clicks", -1).limit(limit))
+
+def count_all_files():
+    return files.count_documents({})
