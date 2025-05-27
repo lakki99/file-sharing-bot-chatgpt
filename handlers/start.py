@@ -1,6 +1,5 @@
 from pyrogram import filters
 from pyrogram.types import Message
-from bot.filters import is_allowed_user
 
 def start_handlers(app):
     @app.on_message(filters.command("start") & filters.private)
